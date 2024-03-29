@@ -2,7 +2,6 @@ package com.adrianm.jwttokenstudy.services;
 
 import com.adrianm.jwttokenstudy.model.User;
 import com.adrianm.jwttokenstudy.model.repository.UsersRepository;
-import com.adrianm.jwttokenstudy.rest.controllers.dto.UserDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;

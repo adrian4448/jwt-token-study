@@ -16,7 +16,7 @@ public class AuthenticationFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         String uri = ((RequestFacade) servletRequest).getRequestURI();
 
-        if ("/auth".equals(uri)) {
+        if (uri.contains("/auth")) {
             filterChain.doFilter(servletRequest, servletResponse);
         } else {
             String bearerToken = ((RequestFacade) servletRequest).getHeader("authorization");
