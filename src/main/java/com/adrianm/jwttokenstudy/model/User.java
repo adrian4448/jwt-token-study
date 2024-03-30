@@ -41,6 +41,12 @@ public class User {
     @CreatedDate
     private LocalDateTime createdAt;
 
+    public void addRole(final Role role) {
+        if (!this.roles.contains(role)) {
+            this.roles.add(role);
+        }
+    }
+
     public static User of(UserDTO userDTO) {
         return User
                 .builder()

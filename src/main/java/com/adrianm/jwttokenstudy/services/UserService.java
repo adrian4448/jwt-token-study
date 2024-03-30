@@ -1,7 +1,9 @@
 package com.adrianm.jwttokenstudy.services;
 
+import com.adrianm.jwttokenstudy.model.Role;
 import com.adrianm.jwttokenstudy.model.User;
 import com.adrianm.jwttokenstudy.model.repository.UsersRepository;
+import com.adrianm.jwttokenstudy.rest.controllers.dto.LinkRolesDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
@@ -15,6 +17,8 @@ import java.util.Optional;
 public class UserService {
 
     private final UsersRepository usersRepository;
+
+    private final RoleService roleService;
 
     public User createUser(final User userToCreate) {
         final User userToFind = User
@@ -49,8 +53,34 @@ public class UserService {
         return usersRepository.findOne(example);
     }
 
+    public void linkRoles(LinkRolesDTO roles, String userId) {
+        User user = usersRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("nao existe um usuario com esse userId"));
+
+        roles.getRolesId().forEach(roleId -> {
+            final Optional<Role> role = roleService.findRoleById(roleId);
+
+            if (role.isEmpty()) {
+                throw new RuntimeException("Este papel nao existe e nao pode ser vinculado");
+            }
+
+            user.addRole(role.get());
+        });
+
+        usersRepository.save(user);
+    }
+
+    public List<Role> getUserRoles(String userId) {
+        User user = usersRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("nao existe um usuario com esse userId"));
+
+        return user.getRoles();
+    }
+
     @Autowired
-    public UserService(final UsersRepository usersRepository) {
+    public UserService(final UsersRepository usersRepository,
+                       final RoleService roleService) {
         this.usersRepository = usersRepository;
+        this.roleService = roleService;
     }
 }
