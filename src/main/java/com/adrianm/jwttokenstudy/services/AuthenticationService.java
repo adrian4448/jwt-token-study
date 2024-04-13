@@ -4,7 +4,10 @@ import com.adrianm.jwttokenstudy.model.User;
 import com.adrianm.jwttokenstudy.rest.controllers.dto.AuthLoginDTO;
 import com.adrianm.jwttokenstudy.services.pojo.TokenPayload;
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,24 +48,29 @@ public class AuthenticationService {
     }
 
     public void verifyToken(String token) throws JsonProcessingException {
-        DecodedJWT decodedToken = JWT.decode(token.replace("Bearer ", ""));
+        try {
+            Algorithm algorithm = Algorithm.HMAC384(privateKey);
+            DecodedJWT decodedToken = JWT.decode(token.replace("Bearer ", ""));
 
-        boolean tokenExpired = decodedToken.getExpiresAtAsInstant()
-                .isBefore(Instant.from(Instant.now().atZone(ZoneId.of("America/Sao_Paulo"))));
+            JWTVerifier verifier = JWT.require(algorithm)
+                    .build();
 
-        if (tokenExpired) {
+            verifier.verify(decodedToken);
+
+            String payloadJson = new String(Base64.getDecoder().decode(decodedToken.getPayload()));
+
+            String encodedAuthenticationId = mapper
+                    .readTree(payloadJson).get("authenticationId").asText();
+
+            String decodedAuthenticationId = new String(Base64.getDecoder().decode(encodedAuthenticationId));
+
+            userService.findUserById(decodedAuthenticationId.split("/")[1])
+                    .orElseThrow(() -> new RuntimeException("Este token e invalido"));
+        } catch (TokenExpiredException e) {
             throw new RuntimeException("O Token ja esta expirado");
+        } catch (JWTVerificationException e) {
+            throw new RuntimeException("O Token e invalido");
         }
-
-        String payloadJson = new String(Base64.getDecoder().decode(decodedToken.getPayload()));
-
-        String encodedAuthenticationId = mapper
-                .readTree(payloadJson).get("authenticationId").asText();
-
-        String decodedAuthenticationId = new String(Base64.getDecoder().decode(encodedAuthenticationId));
-
-        userService.findUserById(decodedAuthenticationId.split("/")[1])
-                .orElseThrow(() -> new RuntimeException("Este token e invalido"));
     }
 
     private TokenPayload buildTokenPayload(String userId,
@@ -73,7 +81,7 @@ public class AuthenticationService {
     }
 
     @Autowired
-    public AuthenticationService(@Value("token.private-key") final String privateKey,
+    public AuthenticationService(@Value("${token.private-key}") final String privateKey,
                                  final UserService userService) {
         this.privateKey = privateKey;
         this.userService = userService;
